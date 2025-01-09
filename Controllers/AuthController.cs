@@ -243,7 +243,7 @@ namespace ASPNetCoreAuth.Controllers
                 {
                     return new BadRequestObjectResult(new { HttpStatusCode = HttpStatusCode.BadRequest, Message = "The new password and confirm password do not match. Please ensure both fields are identical." });
                 }
-
+                 
                 if (ValidatePassword(UserPasswordChange?.NewPassword) == false)
                 {
                     return new BadRequestObjectResult(new { HttpStatusCode = HttpStatusCode.BadRequest, Message = "New password should contains at least one uppercase letter and one number and one non-alphanumeric character" });
