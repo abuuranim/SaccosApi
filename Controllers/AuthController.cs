@@ -227,7 +227,66 @@ namespace ASPNetCoreAuth.Controllers
 
         }
 
+
         [HttpPost]
+        public async Task<IActionResult> ChangeUserPassword([FromBody] UserPasswordChange UserPasswordChange)
+        {
+
+            try
+            {
+                string confirmPassword = UserPasswordChange.ConfirmPassword;
+                string newPassword = UserPasswordChange.NewPassword;
+
+                bool areEqual = confirmPassword.Equals(newPassword, StringComparison.Ordinal); // Case-sensitive comparison
+
+                if (areEqual == false)
+                {
+                    return new BadRequestObjectResult(new { HttpStatusCode = HttpStatusCode.BadRequest, Message = "The new password and confirm password do not match. Please ensure both fields are identical." });
+                }
+
+                if (ValidatePassword(UserPasswordChange?.NewPassword) == false)
+                {
+                    return new BadRequestObjectResult(new { HttpStatusCode = HttpStatusCode.BadRequest, Message = "New password should contains at least one uppercase letter and one number and one non-alphanumeric character" });
+                }
+
+                var username = User.FindFirst("username")?.Value;
+                var userId = User.FindFirst("userId")?.Value;
+
+                var access_token = await _authService.AuthenticateAsync(username, UserPasswordChange.CurrentPassword);
+                if (access_token == null)
+                {
+                    return BadRequest(new { message = "Old password is invalid" }); 
+                }
+
+                string saltingKey = _config["Settings:SaltingKey"];
+                var hashedPassword = Helper.GeneratePasswordHash(UserPasswordChange.NewPassword, saltingKey);
+                string connectionString = _config["ConnectionStrings:DbContext"];
+                using (SqlConnection dbs = new SqlConnection(connectionString))
+                {
+                
+                        dbs.Query<int>("Update dbo.Users Set Password = @NewPassword Where Id = @UserId",
+                                new
+                                {
+
+                                    NewPassword = hashedPassword,
+                                    UserId = userId
+                                }, commandType: CommandType.Text).FirstOrDefault();
+                  
+                        return new ObjectResult(new { StatusCode = HttpStatusCode.OK, Message = "Password has been updated successfully..." });
+
+                }
+
+            }
+            catch (Exception ex)
+            {
+
+                string errorMsg = ex.GetBaseException().Message;
+                return new BadRequestObjectResult(new { HttpStatusCode = HttpStatusCode.InternalServerError, Message = errorMsg });
+            }
+
+        }
+
+            [HttpPost]
         [AllowAnonymous]
         public IActionResult ValidateOTP(OTPValidation OtpValidation)
         {

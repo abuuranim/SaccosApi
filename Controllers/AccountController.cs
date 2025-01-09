@@ -373,6 +373,39 @@ namespace SaccosApi.Controllers
 
 
         [HttpGet]
+        public IActionResult GetMemberAccountBalances() 
+        {
+            try
+            {
+                string connectionString = _config["ConnectionStrings:DbContext"];
+                var usernameClaim = User.FindFirst("username");
+                if (usernameClaim != null)
+                {
+                    var username = usernameClaim.Value;
+
+                    using (SqlConnection dbs = new SqlConnection(connectionString))
+                    {
+                        var result = dbs.Query<dynamic>("dbo.AccountsGetMemberAccountBalances", new { username = username }, commandType: CommandType.StoredProcedure).ToList();
+
+                        return new ObjectResult(new { Data = result, StatusCode = HttpStatusCode.OK, Message = "Account balances fetched successfully..." });
+                    }
+                }
+                else
+                {
+                    return Unauthorized();
+                }
+
+            }
+            catch (Exception exception)
+            {
+                string errorMsg = exception.GetBaseException().Message;
+                return new BadRequestObjectResult(new { HttpStatusCode = HttpStatusCode.InternalServerError, Message = errorMsg });
+            }
+
+        }
+
+
+        [HttpGet]
         public IActionResult GetMemberAkibaAccountBalance() //Akiba ya lazima
         {
             try
